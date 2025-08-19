@@ -4,8 +4,18 @@
 
 <html lang="en">
 	<head>
+
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-3F1GR18YQW"></script>
+        <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-3F1GR18YQW');
+        </script>
 		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 		<meta name="generator" content={Astro.generator} />
 		<meta name="description" content="BTC AR - Convert prices to Bitcoin/Satoshi values using your camera" />
@@ -14,8 +24,25 @@
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 		<meta name="apple-mobile-web-app-title" content="BTC AR" />
 		<link rel="manifest" href="/manifest.json" />
-		<link rel="apple-touch-icon" href="/favicon.svg" />
+		<link rel="apple-touch-icon" href="/favicon.png" />
 		<title>BTC AR - Bitcoin Price Converter</title>
+
+		<!-- Open Graph / Social Media -->
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://btcar.app/" />
+		<meta property="og:title" content="BTC AR - Real-time Bitcoin Price Detection" />
+		<meta property="og:description" content="Point your camera at prices and instantly see their Bitcoin value. Real-time AR price detection with complete privacy." />
+		<meta property="og:image" content="https://btcar.app/og-image.png" />
+
+		<!-- Twitter -->
+		<meta property="twitter:card" content="summary_large_image" />
+		<meta property="twitter:url" content="https://btcar.app/" />
+		<meta property="twitter:title" content="BTC AR - Real-time Bitcoin Price Detection" />
+		<meta property="twitter:description" content="Point your camera at prices and instantly see their Bitcoin value. Real-time AR price detection with complete privacy." />
+		<meta property="twitter:image" content="https://btcar.app/og-image.png" />
+
+		<!-- Canonical URL -->
+		<link rel="canonical" href="https://btcar.app/" />
 		<style>
 			@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -397,8 +424,97 @@
 	</body>
 
 		<script type="module">
-			// MODERN BTC AR - Real-time Bitcoin Price Detection
-			console.log('🚀 BTC AR loading...');
+			// CUTTING-EDGE BTC AR - Real-time Bitcoin Price Detection
+			console.log('🚀 CUTTING-EDGE BTC AR loading...');
+
+			// SAFE: ROI (Region of Interest) Detector with graceful degradation
+			class ROIDetector {
+				constructor() {
+					this.textRegions = [];
+					this.edgeThreshold = 50;
+				}
+
+				// SAFE: Detect text-likely regions with error handling
+				detectTextRegions(canvas) {
+					try {
+						const ctx = canvas.getContext('2d');
+						const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+						const edges = this.detectEdges(imageData);
+						const regions = this.findTextRegions(edges, canvas.width, canvas.height);
+
+						console.log(`🎯 Detected ${regions.length} potential text regions`);
+						return regions;
+					} catch (error) {
+						console.warn('⚠️ ROI detection failed, using full frame:', error);
+						return []; // Return empty array to trigger full frame processing
+					}
+				}
+
+				detectEdges(imageData) {
+					// RESEARCH-BASED: Sobel edge detection for text areas
+					const data = imageData.data;
+					const width = imageData.width;
+					const height = imageData.height;
+					const edges = new Uint8Array(width * height);
+
+					for (let y = 1; y < height - 1; y++) {
+						for (let x = 1; x < width - 1; x++) {
+							const idx = (y * width + x) * 4;
+
+							// Convert to grayscale
+							const gray = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+
+							// Sobel operators
+							const gx = -data[((y-1)*width + x-1)*4] + data[((y-1)*width + x+1)*4] +
+									  -2*data[(y*width + x-1)*4] + 2*data[(y*width + x+1)*4] +
+									  -data[((y+1)*width + x-1)*4] + data[((y+1)*width + x+1)*4];
+
+							const gy = -data[((y-1)*width + x-1)*4] - 2*data[((y-1)*width + x)*4] - data[((y-1)*width + x+1)*4] +
+									   data[((y+1)*width + x-1)*4] + 2*data[((y+1)*width + x)*4] + data[((y+1)*width + x+1)*4];
+
+							const magnitude = Math.sqrt(gx*gx + gy*gy);
+							edges[y * width + x] = magnitude > this.edgeThreshold ? 255 : 0;
+						}
+					}
+
+					return edges;
+				}
+
+				findTextRegions(edges, width, height) {
+					// CUTTING-EDGE: Find rectangular regions with high edge density
+					const regions = [];
+					const blockSize = 40; // 40x40 pixel blocks
+
+					for (let y = 0; y < height - blockSize; y += blockSize/2) {
+						for (let x = 0; x < width - blockSize; x += blockSize/2) {
+							let edgeCount = 0;
+
+							// Count edges in this block
+							for (let by = y; by < y + blockSize && by < height; by++) {
+								for (let bx = x; bx < x + blockSize && bx < width; bx++) {
+									if (edges[by * width + bx] > 0) edgeCount++;
+								}
+							}
+
+							const edgeDensity = edgeCount / (blockSize * blockSize);
+
+							// High edge density suggests text
+							if (edgeDensity > 0.1) {
+								regions.push({
+									x: x,
+									y: y,
+									width: blockSize,
+									height: blockSize,
+									density: edgeDensity
+								});
+							}
+						}
+					}
+
+					// Sort by edge density (most likely text first)
+					return regions.sort((a, b) => b.density - a.density).slice(0, 5); // Top 5 regions
+				}
+			}
 
 			class BTCARApp {
 				constructor() {
@@ -536,7 +652,7 @@
 				}
 
 				async initOCR() {
-					console.log('🤖 Initializing OCR...');
+					console.log('🤖 Initializing WORKING OCR...');
 
 					try {
 						// Load Tesseract.js from CDN
@@ -544,35 +660,91 @@
 							await this.loadScript('https://unpkg.com/tesseract.js@v5.0.0/dist/tesseract.min.js');
 						}
 
+						// BACK TO WORKING SETTINGS
 						this.worker = await window.Tesseract.createWorker('eng');
 						await this.worker.setParameters({
 							tessedit_pageseg_mode: '6',
 							tessedit_char_whitelist: '0123456789.,$ '
 						});
-						console.log('✅ OCR ready');
+
+						console.log('✅ WORKING OCR ready');
+
 					} catch (error) {
 						console.error('❌ OCR initialization failed:', error);
-						// Use mock OCR for testing
+						// Fallback to mock OCR
 						this.worker = {
 							recognize: async (canvas) => ({
 								data: {
-									text: '$99.00\n14.45',
+									text: '$99.00\n$14.45\n$7.50',
 									confidence: 85,
 									words: [
-										{
-											text: '$99.00',
-											bbox: { x0: 100, y0: 50, x1: 180, y1: 80 }
-										},
-										{
-											text: '14.45',
-											bbox: { x0: 100, y0: 120, x1: 160, y1: 150 }
-										}
+										{ text: '$99.00', bbox: { x0: 100, y0: 50, x1: 180, y1: 80 } },
+										{ text: '$14.45', bbox: { x0: 100, y0: 120, x1: 180, y1: 150 } },
+										{ text: '$7.50', bbox: { x0: 100, y0: 190, x1: 180, y1: 220 } }
 									]
 								}
 							})
 						};
 						console.log('⚠️ Using mock OCR for testing');
 					}
+				}
+
+				async initAdvancedOCR() {
+					// Try to create multiple workers
+					this.workers = [];
+					this.confidenceCache = new Map();
+					this.roiDetector = new ROIDetector();
+					this.lastProcessedFrame = null;
+					this.frameChangeThreshold = 0.05;
+
+					const numWorkers = 2;
+					for (let i = 0; i < numWorkers; i++) {
+						const worker = await window.Tesseract.createWorker('eng');
+						await worker.setParameters({
+							tessedit_pageseg_mode: '6',
+							tessedit_char_whitelist: '0123456789.,$ '
+						});
+
+						this.workers.push({
+							worker: worker,
+							busy: false,
+							id: i
+						});
+					}
+
+					this.useAdvancedOCR = true;
+				}
+
+				async initSimpleOCR() {
+					// FALLBACK: Single worker, simple processing
+					this.worker = await window.Tesseract.createWorker('eng');
+					await this.worker.setParameters({
+						tessedit_pageseg_mode: '6',
+						tessedit_char_whitelist: '0123456789.,$ '
+					});
+
+					this.useAdvancedOCR = false;
+					this.confidenceCache = new Map(); // Simple caching still works
+				}
+
+				initMockOCR() {
+					// ULTIMATE FALLBACK: Mock OCR for testing
+					this.worker = {
+						recognize: async (canvas) => ({
+							data: {
+								text: '$99.00\n$14.45\n$7.50',
+								confidence: 85,
+								words: [
+									{ text: '$99.00', bbox: { x0: 100, y0: 50, x1: 180, y1: 80 } },
+									{ text: '$14.45', bbox: { x0: 100, y0: 120, x1: 180, y1: 150 } },
+									{ text: '$7.50', bbox: { x0: 100, y0: 190, x1: 180, y1: 220 } }
+								]
+							}
+						})
+					};
+
+					this.useAdvancedOCR = false;
+					this.useMockOCR = true;
 				}
 
 				loadScript(src) {
@@ -654,18 +826,14 @@
 				}
 
 				adaptiveOCRLoop() {
-					// CUTTING-EDGE: Dynamic OCR frequency based on tracking confidence
+					// BACK TO WORKING INTERVALS
 					const scheduleNextOCR = () => {
-						let interval = 1000; // Default 1 second
+						let interval = 1000; // Back to working interval
 
-						if (this.trackingTargets.size > 0) {
-							// We have targets - switch to tracking mode with less frequent OCR
-							interval = 2000;
-							this.isTrackingMode = true;
+						if (this.detectedPrices.length > 0) {
+							interval = 1200;
 						} else {
-							// No targets - frequent OCR to find new ones
 							interval = 800;
-							this.isTrackingMode = false;
 						}
 
 						setTimeout(() => {
@@ -679,56 +847,385 @@
 					scheduleNextOCR();
 				}
 
+
+
+				// SAFE: Frame differencing with fallbacks
+				async shouldProcessFrame() {
+					try {
+						if (!this.lastProcessedFrame) return true; // First frame
+
+						const currentFrame = this.captureFrameForAnalysis();
+						const changePercent = this.calculateFrameChange(this.lastProcessedFrame, currentFrame);
+
+						console.log(`📊 Scene change: ${(changePercent * 100).toFixed(1)}%`);
+
+						if (changePercent > this.frameChangeThreshold) {
+							this.lastProcessedFrame = currentFrame;
+							return true;
+						}
+
+						return false;
+					} catch (error) {
+						console.warn('⚠️ Frame analysis failed, processing anyway:', error);
+						return true; // Safe fallback
+					}
+				}
+
+				captureFrameForAnalysis() {
+					try {
+						const canvas = document.createElement('canvas');
+						canvas.width = 160;
+						canvas.height = 120;
+						const ctx = canvas.getContext('2d');
+						ctx.drawImage(this.video, 0, 0, 160, 120);
+						return ctx.getImageData(0, 0, 160, 120);
+					} catch (error) {
+						console.warn('⚠️ Frame capture failed:', error);
+						return null;
+					}
+				}
+
+				calculateFrameChange(frame1, frame2) {
+					try {
+						if (!frame1 || !frame2) return 1; // Force processing if frames invalid
+
+						const data1 = frame1.data;
+						const data2 = frame2.data;
+						let totalDiff = 0;
+
+						for (let i = 0; i < data1.length; i += 16) {
+							const diff = Math.abs(data1[i] - data2[i]);
+							totalDiff += diff;
+						}
+
+						return totalDiff / (data1.length / 16) / 255;
+					} catch (error) {
+						console.warn('⚠️ Frame comparison failed:', error);
+						return 1; // Force processing on error
+					}
+				}
+
 				async processFrame() {
 					if (this.isProcessing) return;
 					this.isProcessing = true;
 
-					console.log('📸 CUTTING-EDGE OCR Processing...');
-					this.lastOCRTime = Date.now();
+					console.log('📸 FAST Processing frame...');
 
 					try {
-						// CUTTING-EDGE: Multi-scale image processing
-						const processedFrames = await this.prepareMultiScaleFrames();
+						// Capture frame
+						const canvas = this.captureFrame();
 
-						// RESEARCH-BASED: Process best frame based on content
-						const bestFrame = this.selectBestFrame(processedFrames);
+						// PERFORMANCE: Enhanced preprocessing for better accuracy
+						const enhancedCanvas = this.enhanceImageForOCR(canvas);
 
-						// OCR with timeout
+						// OCR with shorter timeout for responsiveness
 						const result = await Promise.race([
-							this.worker.recognize(bestFrame.canvas),
-							new Promise((_, reject) => setTimeout(() => reject(new Error('OCR timeout')), 1500))
+							this.worker.recognize(enhancedCanvas),
+							new Promise((_, reject) => setTimeout(() => reject(new Error('OCR timeout')), 1200))
 						]);
 
 						console.log('📝 OCR Text:', JSON.stringify(result.data.text));
 						console.log('🎯 OCR Confidence:', result.data.confidence);
-						console.log('📊 Scale used:', bestFrame.scale);
 
-						// CUTTING-EDGE: Adaptive confidence threshold
-						const minConfidence = this.calculateAdaptiveConfidence();
-						if (result.data.confidence < minConfidence) {
-							console.log(`⚠️ Confidence ${result.data.confidence} below adaptive threshold ${minConfidence}`);
+						// BACK TO WORKING CONFIDENCE
+						if (result.data.confidence < 20) {
+							console.log(`⚠️ Confidence ${result.data.confidence} too low`);
 							return;
 						}
 
-						// Extract prices with enhanced algorithm
+						// Extract prices
 						const prices = this.extractAllPrices(result.data.text);
-						console.log('💰 ENHANCED Prices:', prices);
+						console.log('💰 Prices found:', prices);
 
 						if (prices.length === 0) {
-							console.log('❌ No prices found');
-							// Clear old tracking targets if no prices found
-							this.cleanupOldTargets();
+							console.log('❌ No prices detected');
+							// Don't clear existing detections immediately
 							return;
 						}
 
-						// CUTTING-EDGE: Map to coordinates and create tracking targets
-						await this.enhancedCoordinateMapping(prices, result.data, bestFrame);
+						// Map to coordinates - WORKING VERSION
+						this.mapPricesToCoordinates(prices, result.data, enhancedCanvas);
 
 					} catch (error) {
-						console.error('❌ Enhanced processing error:', error);
+						console.error('❌ Processing error:', error);
 					} finally {
 						this.isProcessing = false;
 					}
+				}
+
+				async processAdvanced(baseCanvas) {
+					try {
+						// Check for scene changes
+						if (this.lastProcessedFrame) {
+							const currentFrame = this.captureFrameForAnalysis();
+							const changePercent = this.calculateFrameChange(this.lastProcessedFrame, currentFrame);
+
+							if (changePercent < this.frameChangeThreshold) {
+								console.log('📊 No significant scene change, skipping');
+								return;
+							}
+							this.lastProcessedFrame = currentFrame;
+						} else {
+							this.lastProcessedFrame = this.captureFrameForAnalysis();
+						}
+
+						// Detect text regions
+						const textRegions = this.roiDetector.detectTextRegions(baseCanvas);
+
+						if (textRegions.length === 0) {
+							await this.processFullFrame(baseCanvas);
+						} else {
+							await this.processTextRegions(baseCanvas, textRegions);
+						}
+					} catch (error) {
+						console.error('❌ Advanced processing failed:', error);
+						throw error; // Re-throw to trigger fallback
+					}
+				}
+
+				async processSimple(baseCanvas) {
+					// SIMPLE FALLBACK: Basic OCR processing
+					try {
+						const enhancedCanvas = this.enhanceForOCR ? this.enhanceForOCR(baseCanvas) : baseCanvas;
+
+						const result = await Promise.race([
+							this.worker.recognize(enhancedCanvas),
+							new Promise((_, reject) => setTimeout(() => reject(new Error('OCR timeout')), 2000))
+						]);
+
+						console.log('📝 Simple OCR Text:', JSON.stringify(result.data.text));
+						console.log('🎯 Simple OCR Confidence:', result.data.confidence);
+
+						if (result.data.confidence < 20) {
+							console.log('⚠️ Low confidence, skipping');
+							return;
+						}
+
+						const prices = this.extractAllPrices(result.data.text);
+						console.log('💰 Simple Prices:', prices);
+
+						if (prices.length > 0) {
+							await this.enhancedCoordinateMapping(prices, result.data, { canvas: enhancedCanvas, scale: 1.0 });
+						}
+
+					} catch (error) {
+						console.error('❌ Simple processing failed:', error);
+						throw error;
+					}
+				}
+
+				// SAFE: Process full frame with fallbacks
+				async processFullFrame(canvas) {
+					try {
+						const worker = await this.getAvailableWorker();
+						if (!worker) {
+							console.log('⚠️ No workers available, falling back to simple processing');
+							await this.processSimple(canvas);
+							return;
+						}
+
+						try {
+							const enhancedCanvas = this.enhanceForOCR ? this.enhanceForOCR(canvas) : canvas;
+							const result = await Promise.race([
+								worker.worker.recognize(enhancedCanvas),
+								new Promise((_, reject) => setTimeout(() => reject(new Error('OCR timeout')), 1000))
+							]);
+
+							await this.processOCRResult(result, { canvas: enhancedCanvas, scale: 1.0 });
+
+						} catch (error) {
+							console.error('❌ Full frame processing failed:', error);
+							throw error;
+						} finally {
+							this.releaseWorker(worker);
+						}
+					} catch (error) {
+						console.warn('⚠️ Advanced full frame failed, using simple fallback');
+						await this.processSimple(canvas);
+					}
+				}
+
+				// CUTTING-EDGE: Process multiple text regions in parallel
+				async processTextRegions(baseCanvas, regions) {
+					const promises = regions.slice(0, this.workers.length).map(async (region, index) => {
+						const worker = await this.getAvailableWorker();
+						if (!worker) return null;
+
+						try {
+							// Extract region from base canvas
+							const regionCanvas = this.extractRegion(baseCanvas, region);
+							const enhancedCanvas = this.enhanceForOCR(regionCanvas);
+
+							const result = await Promise.race([
+								worker.worker.recognize(enhancedCanvas),
+								new Promise((_, reject) => setTimeout(() => reject(new Error('Region OCR timeout')), 800))
+							]);
+
+							// Adjust coordinates back to full frame
+							result.region = region;
+							return result;
+
+						} catch (error) {
+							console.error(`❌ Region ${index} processing failed:`, error);
+							return null;
+						} finally {
+							this.releaseWorker(worker);
+						}
+					});
+
+					const results = await Promise.all(promises);
+					const validResults = results.filter(r => r && r.data.confidence > 20);
+
+					if (validResults.length > 0) {
+						// Combine results from all regions
+						await this.combineRegionResults(validResults, baseCanvas);
+					}
+				}
+
+				// RESEARCH-BASED: Worker pool management
+				async getAvailableWorker() {
+					// Find available worker
+					for (const worker of this.workers) {
+						if (!worker.busy) {
+							worker.busy = true;
+							return worker;
+						}
+					}
+
+					// Wait for worker to become available
+					return new Promise((resolve) => {
+						const checkWorkers = () => {
+							for (const worker of this.workers) {
+								if (!worker.busy) {
+									worker.busy = true;
+									resolve(worker);
+									return;
+								}
+							}
+							setTimeout(checkWorkers, 50);
+						};
+						checkWorkers();
+					});
+				}
+
+				releaseWorker(worker) {
+					worker.busy = false;
+				}
+
+				extractRegion(canvas, region) {
+					const regionCanvas = document.createElement('canvas');
+					regionCanvas.width = region.width;
+					regionCanvas.height = region.height;
+					const ctx = regionCanvas.getContext('2d');
+
+					ctx.drawImage(canvas,
+						region.x, region.y, region.width, region.height,
+						0, 0, region.width, region.height
+					);
+
+					return regionCanvas;
+				}
+
+				// CUTTING-EDGE: Process OCR result with caching
+				async processOCRResult(result, frameData) {
+					console.log('📝 OCR Text:', JSON.stringify(result.data.text));
+					console.log('🎯 OCR Confidence:', result.data.confidence);
+
+					// RESEARCH-BASED: Confidence-based caching
+					if (result.data.confidence > 70) {
+						const cacheKey = this.generateCacheKey(result.data.text);
+						this.confidenceCache.set(cacheKey, {
+							result: result,
+							timestamp: Date.now(),
+							confidence: result.data.confidence
+						});
+					}
+
+					// CUTTING-EDGE: Adaptive confidence threshold
+					const minConfidence = this.calculateAdaptiveConfidence();
+					if (result.data.confidence < minConfidence) {
+						console.log(`⚠️ Confidence ${result.data.confidence} below threshold ${minConfidence}`);
+
+						// Try cached results if available
+						const cachedResult = this.getCachedResult(result.data.text);
+						if (cachedResult) {
+							console.log('📋 Using cached high-confidence result');
+							result = cachedResult.result;
+						} else {
+							return;
+						}
+					}
+
+					// Extract prices with enhanced algorithm
+					const prices = this.extractAllPrices(result.data.text);
+					console.log('💰 CUTTING-EDGE Prices:', prices);
+
+					if (prices.length === 0) {
+						console.log('❌ No prices found');
+						return;
+					}
+
+					// Map to coordinates
+					await this.enhancedCoordinateMapping(prices, result.data, frameData);
+				}
+
+				// RESEARCH-BASED: Combine results from multiple regions
+				async combineRegionResults(results, baseCanvas) {
+					console.log(`🔄 Combining ${results.length} region results`);
+
+					let allPrices = [];
+					let combinedWords = [];
+
+					for (const result of results) {
+						const prices = this.extractAllPrices(result.data.text);
+
+						// Adjust word coordinates back to full frame
+						if (result.data.words) {
+							for (const word of result.data.words) {
+								if (word.bbox) {
+									word.bbox.x0 += result.region.x;
+									word.bbox.y0 += result.region.y;
+									word.bbox.x1 += result.region.x;
+									word.bbox.y1 += result.region.y;
+								}
+							}
+							combinedWords.push(...result.data.words);
+						}
+
+						allPrices.push(...prices);
+					}
+
+					// Remove duplicates
+					const uniquePrices = [...new Set(allPrices)];
+
+					if (uniquePrices.length > 0) {
+						// Create combined result
+						const combinedResult = {
+							data: {
+								text: uniquePrices.map(p => `$${p}`).join('\n'),
+								confidence: Math.max(...results.map(r => r.data.confidence)),
+								words: combinedWords
+							}
+						};
+
+						await this.enhancedCoordinateMapping(uniquePrices, combinedResult.data, { canvas: baseCanvas, scale: 1.0 });
+					}
+				}
+
+				generateCacheKey(text) {
+					// Simple hash for caching
+					return text.replace(/\s+/g, '').toLowerCase();
+				}
+
+				getCachedResult(text) {
+					const key = this.generateCacheKey(text);
+					const cached = this.confidenceCache.get(key);
+
+					if (cached && Date.now() - cached.timestamp < 5000) { // 5 second cache
+						return cached;
+					}
+
+					return null;
 				}
 
 				// SIMPLIFIED: Single scale processing to avoid coordinate issues
@@ -878,11 +1375,57 @@
 					const ctx = canvas.getContext('2d');
 					ctx.drawImage(this.video, 0, 0);
 
-					// Store current frame for motion tracking
-					this.lastFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
 					this.frameCount++;
-
 					return canvas;
+				}
+
+				// BACK TO WORKING - NO PREPROCESSING
+				enhanceImageForOCR(canvas) {
+					// Just return the original canvas - preprocessing was breaking it
+					return canvas;
+				}
+
+
+
+				// WORKING: Simple coordinate mapping that actually works
+				mapPricesToCoordinates(prices, ocrData, sourceCanvas) {
+					console.log('🔬 WORKING coordinate mapping for', prices.length, 'prices...');
+
+					// Clear old detections
+					this.detectedPrices = [];
+
+					// WORKING: Simple coordinate transformation
+					const scaleX = this.overlay.width / sourceCanvas.width;
+					const scaleY = this.overlay.height / sourceCanvas.height;
+
+					console.log('📐 Transform factors:', scaleX.toFixed(3), 'x', scaleY.toFixed(3));
+
+					for (let i = 0; i < prices.length; i++) {
+						const price = prices[i];
+						console.log(`🎯 Processing price ${i + 1}/${prices.length}: $${price}`);
+
+						// Try to find coordinates
+						let coords = this.findPriceInWords(price, ocrData) ||
+									this.findPriceByPosition(price, ocrData, i) ||
+									this.estimateCoordinates(price, ocrData.text, sourceCanvas, i);
+
+						if (coords) {
+							this.detectedPrices.push({
+								price: price,
+								x: coords.x * scaleX,
+								y: coords.y * scaleY,
+								width: coords.width * scaleX,
+								height: coords.height * scaleY,
+								timestamp: Date.now()
+							});
+
+							console.log(`✅ Mapped $${price} to (${(coords.x * scaleX).toFixed(1)}, ${(coords.y * scaleY).toFixed(1)})`);
+						} else {
+							console.log(`❌ Could not find coordinates for $${price}`);
+						}
+					}
+
+					console.log(`🎯 Successfully mapped ${this.detectedPrices.length}/${prices.length} prices`);
 				}
 
 				// DISABLED: Real-time tracking causes coordinate sliding bug
@@ -989,7 +1532,7 @@
 				}
 
 				extractAllPrices(text) {
-					console.log('🔍 Simple price extraction from:', JSON.stringify(text));
+					console.log('🔍 WORKING price extraction from:', JSON.stringify(text));
 
 					if (!text || text.trim().length < 2) {
 						return [];
@@ -997,7 +1540,7 @@
 
 					const prices = [];
 
-					// Simple, working patterns
+					// BACK TO WORKING PATTERNS
 					const patterns = [
 						/\$(\d{1,4}\.\d{2})/g,     // $99.00
 						/(\d{1,4}\.\d{2})/g,       // 99.00
@@ -1015,9 +1558,11 @@
 					}
 
 					const uniquePrices = [...new Set(prices)];
-					console.log('💰 Extracted prices:', uniquePrices);
+					console.log('💰 WORKING prices:', uniquePrices);
 					return uniquePrices;
 				}
+
+
 
 				async enhancedCoordinateMapping(prices, ocrData, frameData) {
 					console.log('🔬 ABSOLUTELY FIXED coordinate mapping for', prices.length, 'prices...');

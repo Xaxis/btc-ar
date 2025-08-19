@@ -47,6 +47,31 @@ npm run preview
 
 ## Deployment
 
+🚀 **Live at: [btcar.app](https://btcar.app)**
+
+The app automatically deploys to GitHub Pages when you push to the main branch:
+
+1. **Push to main/master branch**
+2. **GitHub Actions builds** the Astro site
+3. **Deploys to btcar.app** via GitHub Pages
+4. **Custom domain** configured with CNAME
+
+### Manual Deployment
+
+```bash
+# Build and deploy
+npm run deploy
+```
+
+### Domain Setup
+
+The custom domain `btcar.app` is configured via:
+- `public/CNAME` file
+- GitHub Pages settings
+- DNS A records pointing to GitHub Pages IPs
+
+## Deployment
+
 The app is configured for GitHub Pages deployment with automatic builds via GitHub Actions.
 
 1. Push to the `main` branch
@@ -83,31 +108,6 @@ The app is configured for GitHub Pages deployment with automatic builds via GitH
 4. Test thoroughly on mobile devices
 5. Submit a pull request
 
-## License
-
-MIT License - see LICENSE file for details
-
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
-
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
-
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
 ## 🧞 Commands
 
 All commands are run from the root of the project, from a terminal:
@@ -120,7 +120,3 @@ All commands are run from the root of the project, from a terminal:
 | `npm run preview`         | Preview your build locally, before deploying     |
 | `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
 | `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).

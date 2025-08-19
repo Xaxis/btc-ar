@@ -8,7 +8,7 @@ const DYNAMIC_CACHE_NAME = 'btc-ar-dynamic-v1';
 const STATIC_FILES = [
   '/',
   '/manifest.json',
-  '/favicon.svg',
+  '/favicon.png',
   // Tesseract.js core files will be cached dynamically
 ];
 
