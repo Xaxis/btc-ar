@@ -596,6 +596,14 @@
 					// Fetch Bitcoin price immediately
 					await this.fetchBitcoinPrice();
 					this.updateBTCPriceDisplay();
+
+					// SMART LOADING: Auto-start if camera permission already granted
+					if (this.autoStart) {
+						console.log('🚀 Auto-starting app with existing camera permission');
+						setTimeout(() => {
+							this.startApp();
+						}, 500); // Small delay to ensure UI is ready
+					}
 				}
 
 				setupUI() {
@@ -624,6 +632,12 @@
 
 				async startApp() {
 					try {
+						// iOS CHROME FIX: Detect iOS Chrome for stability measures
+						this.isIOSChrome = this.detectIOSChrome();
+						if (this.isIOSChrome) {
+							console.log('📱 iOS Chrome detected - applying stability fixes');
+						}
+
 						// Hide welcome modal
 						document.getElementById('welcome-modal').style.display = 'none';
 
@@ -635,6 +649,11 @@
 
 						// Initialize AR system
 						await this.initializeAR();
+
+						// iOS CHROME FIX: Setup stability monitoring
+						if (this.isIOSChrome) {
+							this.setupIOSStabilityMonitoring();
+						}
 
 					} catch (error) {
 						console.error('❌ App start failed:', error);
@@ -878,10 +897,16 @@
 					const scheduleNextOCR = () => {
 						let interval = 1500; // Longer base interval
 
+						// iOS CHROME FIX: Even longer intervals for stability
+						if (this.isIOSChrome || this.iosStabilityMode) {
+							interval = interval * 1.5; // 50% longer intervals
+							console.log('📱 iOS Chrome: Using extended intervals for stability');
+						}
+
 						if (this.detectedPrices.length > 0) {
-							interval = 2000; // Even longer when we have detections
+							interval = interval * 1.3; // Even longer when we have detections
 						} else {
-							interval = 1200; // Moderate when searching
+							interval = interval * 0.8; // Moderate when searching
 						}
 
 						setTimeout(() => {
@@ -1926,29 +1951,166 @@
 					const btc = priceData.price / this.btcPrice;
 					const sats = btc * 100000000;
 
-					// Conversion box
-					const convX = priceData.x + priceData.width + 10;
-					const convY = priceData.y;
+					// SMART POSITIONING: Calculate optimal position for conversion box
+					const boxWidth = 140;
+					const boxHeight = 50;
+					const position = this.calculateSmartPosition(priceData, boxWidth, boxHeight);
 
 					this.ctx.fillStyle = 'rgba(247, 147, 26, 0.9)';
-					this.ctx.fillRect(convX, convY, 140, 50);
+					this.ctx.fillRect(position.x, position.y, boxWidth, boxHeight);
 
 					this.ctx.strokeStyle = '#f7931a';
 					this.ctx.lineWidth = 2;
-					this.ctx.strokeRect(convX, convY, 140, 50);
+					this.ctx.strokeRect(position.x, position.y, boxWidth, boxHeight);
 
-					// Connection line
+					// Smart connection line
 					this.ctx.beginPath();
-					this.ctx.moveTo(priceData.x + priceData.width, priceData.y + priceData.height/2);
-					this.ctx.lineTo(convX, convY + 25);
+					this.ctx.moveTo(priceData.x + priceData.width/2, priceData.y + priceData.height/2);
+					this.ctx.lineTo(position.x + boxWidth/2, position.y + boxHeight/2);
 					this.ctx.stroke();
 
 					// Text
 					this.ctx.fillStyle = '#000';
 					this.ctx.font = 'bold 11px Arial';
-					this.ctx.fillText(`$${priceData.price.toFixed(2)}`, convX + 5, convY + 15);
-					this.ctx.fillText(`₿${btc.toFixed(8)}`, convX + 5, convY + 30);
-					this.ctx.fillText(`${sats.toFixed(0)} sats`, convX + 5, convY + 45);
+					this.ctx.fillText(`$${priceData.price.toFixed(2)}`, position.x + 5, position.y + 15);
+					this.ctx.fillText(`₿${btc.toFixed(8)}`, position.x + 5, position.y + 30);
+					this.ctx.fillText(`${sats.toFixed(0)} sats`, position.x + 5, position.y + 45);
+				}
+
+				// SMART POSITIONING: Calculate best position for Bitcoin conversion box
+				calculateSmartPosition(priceData, boxWidth, boxHeight) {
+					const canvasWidth = this.overlay.width;
+					const canvasHeight = this.overlay.height;
+					const margin = 10; // Margin from edges and detection box
+
+					// Try positions in order of preference
+					const positions = [
+						// 1. Right of detection box (default)
+						{
+							x: priceData.x + priceData.width + margin,
+							y: priceData.y,
+							priority: 1
+						},
+						// 2. Left of detection box
+						{
+							x: priceData.x - boxWidth - margin,
+							y: priceData.y,
+							priority: 2
+						},
+						// 3. Below detection box
+						{
+							x: priceData.x,
+							y: priceData.y + priceData.height + margin,
+							priority: 3
+						},
+						// 4. Above detection box
+						{
+							x: priceData.x,
+							y: priceData.y - boxHeight - margin,
+							priority: 4
+						},
+						// 5. Bottom-right diagonal
+						{
+							x: priceData.x + priceData.width + margin,
+							y: priceData.y + priceData.height - boxHeight,
+							priority: 5
+						},
+						// 6. Top-right diagonal
+						{
+							x: priceData.x + priceData.width + margin,
+							y: priceData.y - boxHeight + priceData.height,
+							priority: 6
+						}
+					];
+
+					// Find first position that fits on screen
+					for (const pos of positions) {
+						if (this.isPositionValid(pos.x, pos.y, boxWidth, boxHeight, canvasWidth, canvasHeight)) {
+							console.log(`📍 Smart positioning: Using position ${pos.priority} for $${priceData.price}`);
+							return { x: pos.x, y: pos.y };
+						}
+					}
+
+					// FALLBACK: Force position on screen with clamping
+					const fallbackX = Math.max(margin, Math.min(priceData.x, canvasWidth - boxWidth - margin));
+					const fallbackY = Math.max(margin, Math.min(priceData.y, canvasHeight - boxHeight - margin));
+
+					console.log(`📍 Smart positioning: Using fallback position for $${priceData.price}`);
+					return { x: fallbackX, y: fallbackY };
+				}
+
+				// Check if position keeps box fully on screen
+				isPositionValid(x, y, width, height, canvasWidth, canvasHeight) {
+					return x >= 0 &&
+						   y >= 0 &&
+						   x + width <= canvasWidth &&
+						   y + height <= canvasHeight;
+				}
+
+				// iOS CHROME FIX: Detect iOS Chrome browser
+				detectIOSChrome() {
+					const userAgent = navigator.userAgent;
+					const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+					const isChrome = /CriOS/.test(userAgent);
+					return isIOS && isChrome;
+				}
+
+				// iOS CHROME FIX: Setup stability monitoring for iOS Chrome
+				setupIOSStabilityMonitoring() {
+					console.log('📱 Setting up iOS Chrome stability monitoring...');
+
+					// Monitor for camera stream issues
+					this.cameraHealthCheck = setInterval(() => {
+						if (this.video && this.video.readyState === 0) {
+							console.warn('📱 iOS Chrome: Camera stream lost, attempting recovery...');
+							this.recoverCamera();
+						}
+					}, 5000); // Check every 5 seconds
+
+					// Monitor for OCR worker issues
+					this.ocrHealthCheck = setInterval(() => {
+						if (!this.worker) {
+							console.warn('📱 iOS Chrome: OCR worker lost, attempting recovery...');
+							this.recoverOCR();
+						}
+					}, 10000); // Check every 10 seconds
+
+					// Reduce processing frequency for stability
+					this.iosStabilityMode = true;
+					console.log('📱 iOS Chrome stability mode enabled');
+				}
+
+				// iOS CHROME FIX: Recover camera stream
+				async recoverCamera() {
+					try {
+						console.log('📱 Attempting camera recovery...');
+
+						// Stop current stream
+						if (this.video.srcObject) {
+							const tracks = this.video.srcObject.getTracks();
+							tracks.forEach(track => track.stop());
+						}
+
+						// Reinitialize camera
+						await this.initCamera();
+						console.log('📱 Camera recovery successful');
+
+					} catch (error) {
+						console.error('📱 Camera recovery failed:', error);
+						this.showError('Camera connection lost. Please refresh the page.');
+					}
+				}
+
+				// iOS CHROME FIX: Recover OCR worker
+				async recoverOCR() {
+					try {
+						console.log('📱 Attempting OCR recovery...');
+						await this.initOCR();
+						console.log('📱 OCR recovery successful');
+
+					} catch (error) {
+						console.error('📱 OCR recovery failed:', error);
+					}
 				}
 
 				showError(message) {
@@ -1960,8 +2122,20 @@
 			}
 
 			// Initialize app when DOM ready
-			document.addEventListener('DOMContentLoaded', () => {
+			document.addEventListener('DOMContentLoaded', async () => {
 				const app = new BTCARApp();
+
+				// SMART LOADING: Check if camera permission already granted
+				try {
+					const permissions = await navigator.permissions.query({ name: 'camera' });
+					if (permissions.state === 'granted') {
+						console.log('📷 Camera permission already granted - auto-starting app');
+						app.autoStart = true;
+					}
+				} catch (error) {
+					console.log('📷 Permission check not supported - showing intro');
+				}
+
 				app.init();
 			});
 		</script>
