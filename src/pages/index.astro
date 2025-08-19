@@ -585,6 +585,14 @@
 					this.ocrInterval = this.isLowEndDevice ? 3000 : (this.isMobile ? 2000 : 1500);
 					this.renderThrottle = this.isMobile ? 33 : 16; // 30fps vs 60fps
 
+					// MEMORY LEAK FIX: Reusable canvas for frame capture
+					this.captureCanvas = null;
+					this.captureCtx = null;
+
+					// MEMORY LEAK FIX: Track intervals for cleanup
+					this.activeIntervals = [];
+					this.activeTimeouts = [];
+
 					// CUTTING-EDGE AR TRACKING VARIABLES (disabled on low-end devices)
 					this.trackingTargets = new Map();
 					this.lastFrame = null;
@@ -597,6 +605,9 @@
 					// Performance optimization
 					this.processingQueue = [];
 					this.isTrackingMode = false;
+
+					// MEMORY LEAK FIX: Periodic cleanup
+					this.setupPeriodicCleanup();
 				}
 
 				async init() {
@@ -715,33 +726,73 @@
 
 				async initCamera() {
 					this.log('📷 Initializing camera...');
+					this.updateStatus('Requesting camera permission...');
 
-					// MOBILE PERFORMANCE: Adaptive camera constraints
-					const constraints = {
-						video: {
-							width: {
-								ideal: this.isMobile ? 640 : 1280,
-								min: this.isLowEndDevice ? 320 : 640,
-								max: this.isLowEndDevice ? 640 : (this.isMobile ? 720 : 1920)
-							},
-							height: {
-								ideal: this.isMobile ? 480 : 720,
-								min: this.isLowEndDevice ? 240 : 480,
-								max: this.isLowEndDevice ? 480 : (this.isMobile ? 540 : 1080)
-							},
-							frameRate: {
-								ideal: this.isLowEndDevice ? 15 : (this.isMobile ? 20 : 30),
-								max: this.isLowEndDevice ? 20 : 30
-							},
-							facingMode: 'environment'
+					try {
+						// MOBILE PERFORMANCE: Adaptive camera constraints
+						const constraints = {
+							video: {
+								width: {
+									ideal: this.isMobile ? 640 : 1280,
+									min: this.isLowEndDevice ? 320 : 640,
+									max: this.isLowEndDevice ? 640 : (this.isMobile ? 720 : 1920)
+								},
+								height: {
+									ideal: this.isMobile ? 480 : 720,
+									min: this.isLowEndDevice ? 240 : 480,
+									max: this.isLowEndDevice ? 480 : (this.isMobile ? 540 : 1080)
+								},
+								frameRate: {
+									ideal: this.isLowEndDevice ? 15 : (this.isMobile ? 20 : 30),
+									max: this.isLowEndDevice ? 20 : 30
+								},
+								facingMode: 'environment'
+							}
+						};
+
+						this.updateStatus('🔍 Scanning for cameras...');
+						this.log('📷 Requesting camera access with constraints:', constraints);
+
+						// Add timeout for getUserMedia (can hang on some devices)
+						const stream = await Promise.race([
+							navigator.mediaDevices.getUserMedia(constraints),
+							new Promise((_, reject) =>
+								setTimeout(() => reject(new Error('Camera request timeout')), 30000)
+							)
+						]);
+
+						this.updateStatus('📡 Setting up video stream...');
+						this.video.srcObject = stream;
+
+						this.updateStatus('⚙️ Configuring camera settings...');
+						// Wait for video metadata to load
+						await new Promise((resolve, reject) => {
+							this.video.onloadedmetadata = resolve;
+							this.video.onerror = reject;
+							setTimeout(() => reject(new Error('Video load timeout')), 10000);
+						});
+
+						this.updateStatus('🎬 Starting camera preview...');
+						await this.video.play();
+
+						this.log(`✅ Camera ready: ${this.video.videoWidth}x${this.video.videoHeight} @ ${constraints.video.frameRate.ideal}fps`);
+						this.updateStatus('✅ Camera ready - Point at prices!');
+
+					} catch (error) {
+						this.error('❌ Camera initialization failed:', error);
+
+						if (error.name === 'NotAllowedError') {
+							this.updateStatus('Camera permission denied. Please allow camera access and refresh.');
+						} else if (error.name === 'NotFoundError') {
+							this.updateStatus('No camera found. Please check your device.');
+						} else if (error.message.includes('timeout')) {
+							this.updateStatus('Camera initialization timed out. Please refresh and try again.');
+						} else {
+							this.updateStatus('Camera error. Please refresh and try again.');
 						}
-					};
 
-					const stream = await navigator.mediaDevices.getUserMedia(constraints);
-					this.video.srcObject = stream;
-					await this.video.play();
-
-					this.log(`✅ Camera ready: ${this.video.videoWidth}x${this.video.videoHeight} @ ${constraints.video.frameRate.ideal}fps`);
+						throw error;
+					}
 				}
 
 				async initOCR() {
@@ -895,8 +946,9 @@
 					this.video.addEventListener('loadedmetadata', updateOverlay);
 					this.video.addEventListener('resize', updateOverlay);
 
-					// Very frequent updates to catch any positioning changes
-					setInterval(updateOverlay, 33); // 30fps updates
+					// MEMORY LEAK FIX: Track interval for cleanup
+					const overlayInterval = setInterval(updateOverlay, 33); // 30fps updates
+					this.activeIntervals.push(overlayInterval);
 				}
 
 				startProcessing() {
@@ -936,12 +988,19 @@
 							interval = interval * (this.isMobile ? 0.9 : 0.8);
 						}
 
-						setTimeout(() => {
+						// MEMORY LEAK FIX: Track timeout for cleanup
+						const timeout = setTimeout(() => {
 							if (!this.isProcessing) {
 								this.processFrame();
 							}
 							scheduleNextOCR();
 						}, interval);
+
+						// Clean up old timeouts periodically
+						this.activeTimeouts.push(timeout);
+						if (this.activeTimeouts.length > 10) {
+							this.activeTimeouts = this.activeTimeouts.slice(-5); // Keep only last 5
+						}
 					};
 
 					scheduleNextOCR();
@@ -1886,30 +1945,41 @@
 				}
 
 				captureFrame() {
-					const canvas = document.createElement('canvas');
+					// MEMORY LEAK FIX: Reuse canvas instead of creating new ones
+					if (!this.captureCanvas) {
+						this.captureCanvas = document.createElement('canvas');
+						this.captureCtx = this.captureCanvas.getContext('2d');
+
+						// MOBILE PERFORMANCE: Disable image smoothing for speed
+						if (this.isMobile) {
+							this.captureCtx.imageSmoothingEnabled = false;
+						}
+					}
 
 					// MOBILE PERFORMANCE: Limit canvas size for better performance
 					const maxWidth = this.maxCanvasSize;
 					const aspectRatio = this.video.videoHeight / this.video.videoWidth;
 
+					let targetWidth, targetHeight;
 					if (this.video.videoWidth > maxWidth) {
-						canvas.width = maxWidth;
-						canvas.height = maxWidth * aspectRatio;
+						targetWidth = maxWidth;
+						targetHeight = maxWidth * aspectRatio;
 					} else {
-						canvas.width = this.video.videoWidth;
-						canvas.height = this.video.videoHeight;
+						targetWidth = this.video.videoWidth;
+						targetHeight = this.video.videoHeight;
 					}
 
-					const ctx = canvas.getContext('2d');
-
-					// MOBILE PERFORMANCE: Disable image smoothing for speed
-					if (this.isMobile) {
-						ctx.imageSmoothingEnabled = false;
+					// Only resize if dimensions changed
+					if (this.captureCanvas.width !== targetWidth || this.captureCanvas.height !== targetHeight) {
+						this.captureCanvas.width = targetWidth;
+						this.captureCanvas.height = targetHeight;
 					}
 
-					ctx.drawImage(this.video, 0, 0, canvas.width, canvas.height);
+					// Clear and draw
+					this.captureCtx.clearRect(0, 0, targetWidth, targetHeight);
+					this.captureCtx.drawImage(this.video, 0, 0, targetWidth, targetHeight);
 					this.frameCount++;
-					return canvas;
+					return this.captureCanvas;
 				}
 
 				// BACK TO SIMPLE: No preprocessing for now
@@ -2693,6 +2763,102 @@
 					const isIOS = /iPad|iPhone|iPod/.test(userAgent);
 					const isChrome = /CriOS/.test(userAgent);
 					return isIOS && isChrome;
+				}
+
+				// MEMORY LEAK FIX: Periodic cleanup to prevent performance degradation
+				setupPeriodicCleanup() {
+					// Clean up every 30 seconds
+					const cleanupInterval = setInterval(() => {
+						this.performCleanup();
+					}, 30000);
+
+					this.activeIntervals.push(cleanupInterval);
+				}
+
+				// MEMORY LEAK FIX: Comprehensive cleanup
+				performCleanup() {
+					this.log('🧹 Performing periodic cleanup...');
+
+					// 1. Clean up old tracking targets
+					if (this.trackingTargets) {
+						const now = Date.now();
+						let cleaned = 0;
+						for (const [id, target] of this.trackingTargets) {
+							if (now - target.lastUpdate > 5000) {
+								this.trackingTargets.delete(id);
+								cleaned++;
+							}
+						}
+						if (cleaned > 0) {
+							this.log(`🗑️ Cleaned up ${cleaned} old tracking targets`);
+						}
+					}
+
+					// 2. Clear old motion vectors
+					if (this.motionVectors && this.motionVectors.size > 100) {
+						this.motionVectors.clear();
+						this.log('🗑️ Cleared motion vectors cache');
+					}
+
+					// 3. Clear old confidence history
+					if (this.confidenceHistory && this.confidenceHistory.size > 50) {
+						this.confidenceHistory.clear();
+						this.log('🗑️ Cleared confidence history cache');
+					}
+
+					// 4. Clear last frame reference to free memory
+					if (this.lastFrame) {
+						this.lastFrame = null;
+						this.log('🗑️ Cleared last frame reference');
+					}
+
+					// 5. Force garbage collection hint (if available)
+					if (window.gc) {
+						window.gc();
+						this.log('🗑️ Triggered garbage collection');
+					}
+
+					// 6. Reset frame count to prevent overflow
+					if (this.frameCount > 1000000) {
+						this.frameCount = 0;
+						this.log('🗑️ Reset frame counter');
+					}
+				}
+
+				// MEMORY LEAK FIX: Clean shutdown
+				destroy() {
+					this.log('🛑 Destroying BTC AR app...');
+
+					// Clear all intervals
+					this.activeIntervals.forEach(interval => clearInterval(interval));
+					this.activeIntervals = [];
+
+					// Clear all timeouts
+					this.activeTimeouts.forEach(timeout => clearTimeout(timeout));
+					this.activeTimeouts = [];
+
+					// Clear health check intervals
+					if (this.cameraHealthCheck) {
+						clearInterval(this.cameraHealthCheck);
+					}
+					if (this.ocrHealthCheck) {
+						clearInterval(this.ocrHealthCheck);
+					}
+
+					// Clean up canvas references
+					this.captureCanvas = null;
+					this.captureCtx = null;
+
+					// Clear tracking data
+					if (this.trackingTargets) this.trackingTargets.clear();
+					if (this.motionVectors) this.motionVectors.clear();
+					if (this.confidenceHistory) this.confidenceHistory.clear();
+
+					// Clear frame references
+					this.lastFrame = null;
+					this.detectedPrices = [];
+
+					this.log('✅ App destroyed and memory cleaned');
 				}
 
 				// MOBILE PERFORMANCE: Optimized logging system
