@@ -1473,10 +1473,11 @@
 
 				// WORKING: Simple coordinate mapping that actually works
 				mapPricesToCoordinates(prices, ocrData, sourceCanvas) {
-					console.log('🔬 WORKING coordinate mapping for', prices.length, 'prices...');
+					console.log('🔬 MULTI-PRICE coordinate mapping for', prices.length, 'prices...');
 
-					// Clear old detections
-					this.detectedPrices = [];
+					// FIXED: Don't clear all detections - accumulate and update
+					const now = Date.now();
+					const newDetections = [];
 
 					// WORKING: Simple coordinate transformation
 					const scaleX = this.overlay.width / sourceCanvas.width;
@@ -1494,22 +1495,57 @@
 									this.estimateCoordinates(price, ocrData.text, sourceCanvas, i);
 
 						if (coords) {
-							this.detectedPrices.push({
+							const detection = {
 								price: price,
 								x: coords.x * scaleX,
 								y: coords.y * scaleY,
 								width: coords.width * scaleX,
 								height: coords.height * scaleY,
-								timestamp: Date.now()
-							});
+								timestamp: now,
+								id: `price_${price}_${coords.x}_${coords.y}` // Unique ID for tracking
+							};
 
+							newDetections.push(detection);
 							console.log(`✅ Mapped $${price} to (${(coords.x * scaleX).toFixed(1)}, ${(coords.y * scaleY).toFixed(1)})`);
 						} else {
 							console.log(`❌ Could not find coordinates for $${price}`);
 						}
 					}
 
-					console.log(`🎯 Successfully mapped ${this.detectedPrices.length}/${prices.length} prices`);
+					// FIXED: Merge new detections with existing ones
+					this.mergeDetections(newDetections);
+
+					console.log(`🎯 Total active prices: ${this.detectedPrices.length} (${newDetections.length} new)`);
+				}
+
+				// FIXED: Smart detection merging to maintain multiple prices
+				mergeDetections(newDetections) {
+					const now = Date.now();
+
+					// Remove old detections (older than 5 seconds)
+					this.detectedPrices = this.detectedPrices.filter(p => now - p.timestamp < 5000);
+
+					// Add new detections, avoiding duplicates
+					for (const newDetection of newDetections) {
+						// Check if this price is already detected nearby
+						const existing = this.detectedPrices.find(p =>
+							Math.abs(p.price - newDetection.price) < 0.01 &&
+							Math.abs(p.x - newDetection.x) < 50 &&
+							Math.abs(p.y - newDetection.y) < 50
+						);
+
+						if (existing) {
+							// Update existing detection with fresh timestamp
+							existing.timestamp = now;
+							existing.x = newDetection.x;
+							existing.y = newDetection.y;
+							console.log(`🔄 Updated existing detection for $${newDetection.price}`);
+						} else {
+							// Add new detection
+							this.detectedPrices.push(newDetection);
+							console.log(`➕ Added new detection for $${newDetection.price}`);
+						}
+					}
 				}
 
 				// DISABLED: Real-time tracking causes coordinate sliding bug
