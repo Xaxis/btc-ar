@@ -1,0 +1,49 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f7931a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff6b00;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="btcGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f0f0f0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#bgGradient)" stroke="#000" stroke-width="8"/>
+  
+  <!-- Camera viewfinder -->
+  <rect x="80" y="120" width="352" height="200" rx="20" fill="none" stroke="#fff" stroke-width="6" opacity="0.8"/>
+  <rect x="90" y="130" width="332" height="180" rx="15" fill="none" stroke="#fff" stroke-width="3" opacity="0.6"/>
+  
+  <!-- Bitcoin symbol -->
+  <g transform="translate(256, 256)">
+    <!-- Bitcoin B -->
+    <path d="M-40,-60 L-40,60 L-20,60 L-20,50 L10,50 Q25,50 25,35 Q25,20 15,15 Q25,10 25,-5 Q25,-20 10,-20 L-20,-20 L-20,-30 L-40,-30 Z M-20,-10 L5,-10 Q10,-10 10,-5 Q10,0 5,0 L-20,0 Z M-20,10 L10,10 Q15,10 15,15 Q15,20 10,20 L-20,20 Z" fill="url(#btcGradient)" stroke="#000" stroke-width="2"/>
+    
+    <!-- Bitcoin symbol lines -->
+    <line x1="-30" y1="-70" x2="-30" y2="-50" stroke="url(#btcGradient)" stroke-width="4" stroke-linecap="round"/>
+    <line x1="-30" y1="50" x2="-30" y2="70" stroke="url(#btcGradient)" stroke-width="4" stroke-linecap="round"/>
+    <line x1="-10" y1="-70" x2="-10" y2="-50" stroke="url(#btcGradient)" stroke-width="4" stroke-linecap="round"/>
+    <line x1="-10" y1="50" x2="-10" y2="70" stroke="url(#btcGradient)" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  
+  <!-- AR scanning lines -->
+  <g opacity="0.7">
+    <!-- Top left corner -->
+    <path d="M100,140 L100,120 L120,120" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+    <!-- Top right corner -->
+    <path d="M392,120 L412,120 L412,140" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+    <!-- Bottom left corner -->
+    <path d="M120,300 L100,300 L100,280" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+    <!-- Bottom right corner -->
+    <path d="M412,280 L412,300 L392,300" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Price conversion indicator -->
+  <g transform="translate(380, 180)" opacity="0.9">
+    <rect x="-30" y="-15" width="60" height="30" rx="15" fill="#000" opacity="0.8"/>
+    <text x="0" y="5" text-anchor="middle" fill="#f7931a" font-family="Arial, sans-serif" font-size="12" font-weight="bold">$→₿</text>
+  </g>
+</svg>

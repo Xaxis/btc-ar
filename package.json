@@ -1,0 +1,15 @@
+{
+  "name": "btc-ar-app",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev --port 5432 --host 0.0.0.0",
+    "build": "astro build",
+    "preview": "astro preview --port 5432",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "astro": "^5.13.2",
+    "tesseract.js": "^6.0.1"
+  }
+}
