@@ -575,18 +575,28 @@
 					this.isProcessing = false;
 					this.isInitialized = false;
 
-					// CUTTING-EDGE AR TRACKING VARIABLES
-					this.trackingTargets = new Map(); // Template-based tracking
+					// MOBILE PERFORMANCE: Device detection and optimization flags
+					this.isMobile = this.detectMobile();
+					this.isLowEndDevice = this.detectLowEndDevice();
+					this.enableLogging = !this.isMobile || window.location.search.includes('debug=true');
+
+					// MOBILE PERFORMANCE: Adaptive settings based on device
+					this.maxCanvasSize = this.isMobile ? 800 : 1200;
+					this.ocrInterval = this.isLowEndDevice ? 3000 : (this.isMobile ? 2000 : 1500);
+					this.renderThrottle = this.isMobile ? 33 : 16; // 30fps vs 60fps
+
+					// CUTTING-EDGE AR TRACKING VARIABLES (disabled on low-end devices)
+					this.trackingTargets = new Map();
 					this.lastFrame = null;
-					this.motionVectors = new Map(); // Optical flow data
-					this.confidenceHistory = new Map(); // Kalman filtering
-					this.roiRegions = []; // Adaptive regions of interest
+					this.motionVectors = this.isLowEndDevice ? null : new Map();
+					this.confidenceHistory = this.isLowEndDevice ? null : new Map();
+					this.roiRegions = [];
 					this.frameCount = 0;
 					this.lastOCRTime = 0;
 
 					// Performance optimization
 					this.processingQueue = [];
-					this.isTrackingMode = false; // Switch between OCR and tracking
+					this.isTrackingMode = false;
 				}
 
 				async init() {
@@ -704,18 +714,34 @@
 				}
 
 				async initCamera() {
-					console.log('📷 Initializing camera...');
-					const stream = await navigator.mediaDevices.getUserMedia({
+					this.log('📷 Initializing camera...');
+
+					// MOBILE PERFORMANCE: Adaptive camera constraints
+					const constraints = {
 						video: {
-							width: { ideal: 1920, min: 1280 },
-							height: { ideal: 1080, min: 720 },
+							width: {
+								ideal: this.isMobile ? 640 : 1280,
+								min: this.isLowEndDevice ? 320 : 640,
+								max: this.isLowEndDevice ? 640 : (this.isMobile ? 720 : 1920)
+							},
+							height: {
+								ideal: this.isMobile ? 480 : 720,
+								min: this.isLowEndDevice ? 240 : 480,
+								max: this.isLowEndDevice ? 480 : (this.isMobile ? 540 : 1080)
+							},
+							frameRate: {
+								ideal: this.isLowEndDevice ? 15 : (this.isMobile ? 20 : 30),
+								max: this.isLowEndDevice ? 20 : 30
+							},
 							facingMode: 'environment'
 						}
-					});
+					};
 
+					const stream = await navigator.mediaDevices.getUserMedia(constraints);
 					this.video.srcObject = stream;
 					await this.video.play();
-					console.log('✅ Camera ready:', this.video.videoWidth, 'x', this.video.videoHeight);
+
+					this.log(`✅ Camera ready: ${this.video.videoWidth}x${this.video.videoHeight} @ ${constraints.video.frameRate.ideal}fps`);
 				}
 
 				async initOCR() {
@@ -893,20 +919,21 @@
 				}
 
 				adaptiveOCRLoop() {
-					// TIMEOUT FIX: Longer intervals to prevent overwhelming OCR
+					// MOBILE PERFORMANCE: Adaptive OCR intervals based on device capability
 					const scheduleNextOCR = () => {
-						let interval = 1500; // Longer base interval
+						let interval = this.ocrInterval; // Device-specific base interval
 
 						// iOS CHROME FIX: Even longer intervals for stability
 						if (this.isIOSChrome || this.iosStabilityMode) {
-							interval = interval * 1.5; // 50% longer intervals
-							console.log('📱 iOS Chrome: Using extended intervals for stability');
+							interval = interval * 1.5;
+							this.log('📱 iOS Chrome: Using extended intervals for stability');
 						}
 
+						// MOBILE PERFORMANCE: Longer intervals when we have detections
 						if (this.detectedPrices.length > 0) {
-							interval = interval * 1.3; // Even longer when we have detections
+							interval = interval * (this.isMobile ? 1.5 : 1.3);
 						} else {
-							interval = interval * 0.8; // Moderate when searching
+							interval = interval * (this.isMobile ? 0.9 : 0.8);
 						}
 
 						setTimeout(() => {
@@ -983,12 +1010,12 @@
 
 					// TIMEOUT FIX: Check if worker is ready
 					if (!this.worker) {
-						console.warn('⚠️ OCR worker not ready yet');
+						this.warn('⚠️ OCR worker not ready yet');
 						return;
 					}
 
 					this.isProcessing = true;
-					console.log('📸 FAST Processing frame...');
+					this.log('📸 FAST Processing frame...');
 
 					try {
 						// Capture frame
@@ -1003,21 +1030,21 @@
 							new Promise((_, reject) => setTimeout(() => reject(new Error('OCR timeout')), 3000))
 						]);
 
-						console.log('📝 OCR Text:', JSON.stringify(result.data.text));
-						console.log('🎯 OCR Confidence:', result.data.confidence);
+						this.log('📝 OCR Text:', JSON.stringify(result.data.text));
+						this.log('🎯 OCR Confidence:', result.data.confidence);
 
 						// BACK TO WORKING CONFIDENCE
 						if (result.data.confidence < 20) {
-							console.log(`⚠️ Confidence ${result.data.confidence} too low`);
+							this.log(`⚠️ Confidence ${result.data.confidence} too low`);
 							return;
 						}
 
 						// Extract prices
 						const prices = this.extractAllPrices(result.data.text);
-						console.log('💰 Prices found:', prices);
+						this.log('💰 Prices found:', prices);
 
 						if (prices.length === 0) {
-							console.log('❌ No prices detected');
+							this.log('❌ No prices detected');
 							// Don't clear existing detections immediately
 							return;
 						}
@@ -1027,10 +1054,10 @@
 
 					} catch (error) {
 						if (error.message === 'OCR timeout') {
-							console.warn('⏱️ OCR timeout - will retry next cycle');
+							this.warn('⏱️ OCR timeout - will retry next cycle');
 							// Don't log as error, just a warning
 						} else {
-							console.error('❌ Processing error:', error);
+							this.error('❌ Processing error:', error);
 						}
 					} finally {
 						this.isProcessing = false;
@@ -1454,11 +1481,27 @@
 
 				captureFrame() {
 					const canvas = document.createElement('canvas');
-					canvas.width = this.video.videoWidth;
-					canvas.height = this.video.videoHeight;
-					const ctx = canvas.getContext('2d');
-					ctx.drawImage(this.video, 0, 0);
 
+					// MOBILE PERFORMANCE: Limit canvas size for better performance
+					const maxWidth = this.maxCanvasSize;
+					const aspectRatio = this.video.videoHeight / this.video.videoWidth;
+
+					if (this.video.videoWidth > maxWidth) {
+						canvas.width = maxWidth;
+						canvas.height = maxWidth * aspectRatio;
+					} else {
+						canvas.width = this.video.videoWidth;
+						canvas.height = this.video.videoHeight;
+					}
+
+					const ctx = canvas.getContext('2d');
+
+					// MOBILE PERFORMANCE: Disable image smoothing for speed
+					if (this.isMobile) {
+						ctx.imageSmoothingEnabled = false;
+					}
+
+					ctx.drawImage(this.video, 0, 0, canvas.width, canvas.height);
 					this.frameCount++;
 					return canvas;
 				}
@@ -1940,26 +1983,28 @@
 
 					this.ctx.clearRect(0, 0, this.overlay.width, this.overlay.height);
 
-					// Center crosshair for aiming reference
-					const centerX = this.overlay.width / 2;
-					const centerY = this.overlay.height / 2;
-					this.ctx.strokeStyle = '#FFFF00';
-					this.ctx.lineWidth = 2;
-					this.ctx.globalAlpha = 0.7;
-					this.ctx.beginPath();
-					this.ctx.moveTo(centerX - 15, centerY);
-					this.ctx.lineTo(centerX + 15, centerY);
-					this.ctx.moveTo(centerX, centerY - 15);
-					this.ctx.lineTo(centerX, centerY + 15);
-					this.ctx.stroke();
-					this.ctx.globalAlpha = 1;
+					// MOBILE PERFORMANCE: Simplified crosshair on low-end devices
+					if (!this.isLowEndDevice) {
+						const centerX = this.overlay.width / 2;
+						const centerY = this.overlay.height / 2;
+						this.ctx.strokeStyle = '#FFFF00';
+						this.ctx.lineWidth = 2;
+						this.ctx.globalAlpha = 0.7;
+						this.ctx.beginPath();
+						this.ctx.moveTo(centerX - 15, centerY);
+						this.ctx.lineTo(centerX + 15, centerY);
+						this.ctx.moveTo(centerX, centerY - 15);
+						this.ctx.lineTo(centerX, centerY + 15);
+						this.ctx.stroke();
+						this.ctx.globalAlpha = 1;
+					}
 
 					// Remove old detections (5 second timeout)
 					const now = Date.now();
 					this.detectedPrices = this.detectedPrices.filter(p => now - p.timestamp < 5000);
 
-					// Update status based on detections
-					if (this.isInitialized) {
+					// MOBILE PERFORMANCE: Reduce status updates on mobile (every 10 frames)
+					if (this.isInitialized && (!this.isMobile || this.frameCount % 10 === 0)) {
 						if (this.detectedPrices.length > 0) {
 							this.updateStatus(`Tracking ${this.detectedPrices.length} price${this.detectedPrices.length > 1 ? 's' : ''}`);
 						} else {
@@ -2083,12 +2128,62 @@
 						   y + height <= canvasHeight;
 				}
 
+				// MOBILE PERFORMANCE: Detect mobile devices
+				detectMobile() {
+					const userAgent = navigator.userAgent;
+					return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent) ||
+						   window.innerWidth <= 768 ||
+						   ('ontouchstart' in window);
+				}
+
+				// MOBILE PERFORMANCE: Detect low-end devices
+				detectLowEndDevice() {
+					// Check device memory (if available)
+					if (navigator.deviceMemory && navigator.deviceMemory <= 2) {
+						return true;
+					}
+
+					// Check CPU cores (if available)
+					if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2) {
+						return true;
+					}
+
+					// Check user agent for known low-end devices
+					const userAgent = navigator.userAgent.toLowerCase();
+					const lowEndPatterns = [
+						'android 4', 'android 5', 'android 6',
+						'iphone os 10', 'iphone os 11', 'iphone os 12',
+						'samsung-sm-j', 'samsung-sm-g3', 'lg-k',
+						'moto e', 'moto g4', 'redmi'
+					];
+
+					return lowEndPatterns.some(pattern => userAgent.includes(pattern));
+				}
+
 				// iOS CHROME FIX: Detect iOS Chrome browser
 				detectIOSChrome() {
 					const userAgent = navigator.userAgent;
 					const isIOS = /iPad|iPhone|iPod/.test(userAgent);
 					const isChrome = /CriOS/.test(userAgent);
 					return isIOS && isChrome;
+				}
+
+				// MOBILE PERFORMANCE: Optimized logging system
+				log(message, ...args) {
+					if (this.enableLogging) {
+						console.log(message, ...args);
+					}
+				}
+
+				warn(message, ...args) {
+					if (this.enableLogging) {
+						console.warn(message, ...args);
+					}
+				}
+
+				error(message, ...args) {
+					// Always log errors, even on mobile
+					console.error(message, ...args);
 				}
 
 				// iOS CHROME FIX: Setup stability monitoring for iOS Chrome
